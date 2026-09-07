@@ -1,0 +1,16 @@
+fastapi==0.129.0
+uvicorn[standard]
+pydantic==2.12.5
+pydantic-settings==2.13.1
+email-validator
+SQLAlchemy==2.0.46
+psycopg2-binary
+bcrypt==4.2.1
+passlib
+python-jose
+python-dotenv
+python-multipart
+xhtml2pdf
+httpx
+alembic>=1.13.0
+slowapi>=0.1.9

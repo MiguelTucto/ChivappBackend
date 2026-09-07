@@ -1,0 +1,38 @@
+# OS & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
+
+# Testing & Cache
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Environment Secrets
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Local Uploads (archivos subidos localmente no deben ir al repositorio)
+uploads/*
+!uploads/.gitkeep
