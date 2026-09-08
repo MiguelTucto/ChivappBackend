@@ -474,6 +474,13 @@ def release_payment(
     return payment
 
 
+@router.get("/mercadopago/public-key")
+def get_mercadopago_public_key():
+    return {
+        "public_key": settings.MERCADO_PAGO_PUBLIC_KEY.strip()
+    }
+
+
 @router.post("/mercadopago/preference", response_model=MercadoPagoPreferenceResponse)
 def create_mercadopago_preference(
     payload: MercadoPagoPreferenceRequest,
