@@ -418,13 +418,30 @@ def process_direct_payment(
             status_detail = data.get("status_detail")
             payment_id = str(data.get("id")) if data.get("id") else None
 
-            status_messages = {
-                "approved": "¡Pago aprobado con éxito! Tu reserva ha quedado confirmada.",
-                "in_process": "El pago está en proceso de revisión por la entidad financiera.",
-                "pending": "El pago se encuentra pendiente de acreditación.",
-                "rejected": "El pago fue rechazado. Verifica los datos o intenta con otro medio de pago.",
+            detail_messages = {
+                "rejected_high_risk": "Pago rechazado por prevención de riesgo/fraude de Mercado Pago. (Nota: en modo producción no puedes pagarte a ti mismo con tu propio celular/tarjeta/cuenta de Mercado Pago).",
+                "rejected_by_bank": "El banco emisor o la billetera rechazó la operación.",
+                "cc_rejected_insufficient_amount": "Saldo o fondos insuficientes en la cuenta.",
+                "cc_rejected_bad_filled_security_code": "Código de seguridad o validación inválido.",
+                "cc_rejected_bad_filled_date": "Fecha de vencimiento de la tarjeta inválida.",
+                "cc_rejected_bad_filled_other": "Datos ingresados incorrectos o no coinciden.",
+                "cc_rejected_call_for_authorize": "Debes llamar a tu banco para autorizar compras por internet.",
+                "cc_rejected_card_disabled": "Tu tarjeta o cuenta no está habilitada para pagos por internet.",
+                "cc_rejected_duplicated_payment": "Se detectó un pago duplicado reciente para este monto.",
+                "cc_rejected_max_attempts": "Se superó el límite de intentos permitidos. Intenta más tarde.",
             }
-            friendly_message = status_messages.get(status, f"Estado del pago: {status}")
+
+            if status == "approved":
+                friendly_message = "¡Pago aprobado con éxito! Tu reserva ha quedado confirmada."
+            elif status == "in_process":
+                friendly_message = "El pago está en proceso de revisión por la entidad financiera."
+            elif status == "pending":
+                friendly_message = "El pago se encuentra pendiente de acreditación."
+            else:
+                friendly_message = (
+                    detail_messages.get(status_detail)
+                    or f"El pago fue rechazado ({status_detail or 'motivo desconocido'}). Verifica los datos o intenta con otro medio de pago."
+                )
 
             if status == "approved":
                 process_approved_mercadopago_payment(db, data)
