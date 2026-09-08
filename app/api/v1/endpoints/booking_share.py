@@ -238,7 +238,7 @@ async def upload_public_share_file(
 ):
     _get_shared_booking_or_410(db, token)
     try:
-        url = save_upload(file)
+        url = await save_upload(file)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"url": url}

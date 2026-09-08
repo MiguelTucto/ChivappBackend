@@ -6,10 +6,25 @@ from fastapi import UploadFile
 UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads"
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg",
+    "image/jpg",
+    "image/pjpeg",
     "image/png",
+    "image/x-png",
     "image/webp",
+    "image/gif",
     "application/pdf",
+    "application/x-pdf",
+    "application/acrobat",
 }
+ALLOWED_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".gif",
+    ".pdf",
+}
+MAX_FILE_SIZE = 15 * 1024 * 1024  # 15 MB
 
 
 def ensure_upload_dir() -> Path:
@@ -17,18 +32,36 @@ def ensure_upload_dir() -> Path:
     return UPLOAD_DIR
 
 
-def save_upload(file: UploadFile) -> str:
-    if file.content_type not in ALLOWED_CONTENT_TYPES:
-        raise ValueError("Tipo de archivo no permitido. Usa JPG, PNG, WEBP o PDF.")
-
+async def save_upload(file: UploadFile) -> str:
+    raw_ct = (file.content_type or "").split(";")[0].strip().lower()
     extension = Path(file.filename or "file").suffix.lower()
+
+    # Si el content_type es conocido o si es genérico pero la extensión es válida
+    is_valid_mime = raw_ct in ALLOWED_CONTENT_TYPES
+    is_valid_ext = extension in ALLOWED_EXTENSIONS
+
+    if not is_valid_mime and not is_valid_ext:
+        raise ValueError("Tipo de archivo no permitido. Formatos aceptados: JPG, PNG, WEBP o PDF.")
+
     if not extension:
-        extension = ".jpg" if file.content_type.startswith("image/") else ".pdf"
+        if raw_ct.startswith("image/"):
+            extension = ".jpg"
+        elif "pdf" in raw_ct:
+            extension = ".pdf"
+        else:
+            extension = ".jpg"
+
+    content = await file.read()
+    if not content:
+        raise ValueError("El archivo seleccionado está vacío.")
+
+    if len(content) > MAX_FILE_SIZE:
+        raise ValueError("El archivo supera el tamaño máximo permitido (15 MB).")
 
     filename = f"{uuid.uuid4()}{extension}"
     destination = ensure_upload_dir() / filename
 
     with destination.open("wb") as buffer:
-        buffer.write(file.file.read())
+        buffer.write(content)
 
     return f"/uploads/{filename}"
