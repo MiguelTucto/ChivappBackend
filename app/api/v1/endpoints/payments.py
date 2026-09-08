@@ -521,13 +521,11 @@ def create_mercadopago_preference(
 
     # Cálculo del monto según el tipo de pago
     if payload.payment_type == "advance":
-        base_amount = (
-            booking.advance_amount
-            if booking.advance_amount is not None
-            else ((booking.price_agreed or Decimal("0")) / Decimal("2"))
-        )
-        fee_amount = booking.platform_fee_amount or Decimal("0")
-        total_amount = float(base_amount + fee_amount)
+        if booking.advance_amount is not None:
+            base_amount = booking.advance_amount
+        else:
+            base_amount = booking.price_agreed or Decimal("0")
+        total_amount = float(base_amount)
     elif payload.payment_type == "full":
         base_amount = booking.price_agreed or Decimal("0")
         fee_amount = booking.platform_fee_amount or Decimal("0")
@@ -539,6 +537,9 @@ def create_mercadopago_preference(
         total_amount = float(due)
     else:
         raise HTTPException(400, "Tipo de pago no soportado")
+
+    if payload.amount and payload.amount > 0:
+        total_amount = float(payload.amount)
 
     if total_amount <= 0:
         raise HTTPException(400, "El monto a pagar debe ser mayor a cero")
@@ -596,13 +597,11 @@ def process_mercadopago_direct_payment(
 
     # Cálculo del monto según el tipo de pago
     if payload.payment_type == "advance":
-        base_amount = (
-            booking.advance_amount
-            if booking.advance_amount is not None
-            else ((booking.price_agreed or Decimal("0")) / Decimal("2"))
-        )
-        fee_amount = booking.platform_fee_amount or Decimal("0")
-        total_amount = float(base_amount + fee_amount)
+        if booking.advance_amount is not None:
+            base_amount = booking.advance_amount
+        else:
+            base_amount = booking.price_agreed or Decimal("0")
+        total_amount = float(base_amount)
     elif payload.payment_type == "full":
         base_amount = booking.price_agreed or Decimal("0")
         fee_amount = booking.platform_fee_amount or Decimal("0")
@@ -614,6 +613,10 @@ def process_mercadopago_direct_payment(
         total_amount = float(due)
     else:
         raise HTTPException(400, "Tipo de pago no soportado")
+
+    # Si el frontend envió el monto exacto autorizado en el brick o Yape, lo respetamos
+    if payload.amount and payload.amount > 0:
+        total_amount = float(payload.amount)
 
     if total_amount <= 0:
         raise HTTPException(400, "El monto a pagar debe ser mayor a cero")

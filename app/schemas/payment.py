@@ -88,6 +88,7 @@ class PaymentOut(BaseModel):
 class MercadoPagoPreferenceRequest(BaseModel):
     booking_id: str
     payment_type: str = Field(pattern="^(advance|full|balance)$")
+    amount: float | None = None
     signature_image_url: str | None = None
     sign_ip: str | None = None
     payer_email: str | None = None

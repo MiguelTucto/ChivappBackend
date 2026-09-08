@@ -360,7 +360,7 @@ def process_direct_payment(
 
     mp_body: dict[str, Any] = {
         "token": token,
-        "transaction_amount": round(amount, 2),
+        "transaction_amount": float(round(amount, 2)),
         "description": description,
         "payment_method_id": payment_method_id,
         "installments": installments,
@@ -392,7 +392,13 @@ def process_direct_payment(
             )
             data = resp.json()
             if resp.status_code >= 400:
-                logger.error("Error al procesar pago directo en Mercado Pago: %s %s", resp.status_code, resp.text)
+                safe_body = {k: v for k, v in mp_body.items() if k != "token"}
+                logger.error(
+                    "Error al procesar pago directo en Mercado Pago: %s %s - Body: %s",
+                    resp.status_code,
+                    resp.text,
+                    safe_body,
+                )
                 message = data.get("message") or "El pago no pudo ser procesado."
                 cause = data.get("cause")
                 if cause and isinstance(cause, list) and len(cause) > 0:
