@@ -169,6 +169,26 @@ def get_payment_details(payment_id: str) -> dict[str, Any]:
         raise ValueError(f"Error al conectar con Mercado Pago: {exc}") from exc
 
 
+def get_merchant_order_details(merchant_order_id: str) -> dict[str, Any]:
+    if not is_mercadopago_configured():
+        raise ValueError("Mercado Pago no está configurado.")
+
+    try:
+        with httpx.Client(timeout=15.0) as client:
+            resp = client.get(
+                f"{MERCADO_PAGO_API_BASE}/merchant_orders/{merchant_order_id}",
+                headers=_mp_headers(),
+            )
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.HTTPStatusError as exc:
+        logger.error("Error al obtener merchant order %s de Mercado Pago: %s", merchant_order_id, exc.response.text)
+        raise ValueError(f"Error al consultar orden en Mercado Pago: {exc.response.text}") from exc
+    except Exception as exc:
+        logger.error("Error de conexión con Mercado Pago para merchant order %s: %s", merchant_order_id, exc)
+        raise ValueError(f"Error al conectar con Mercado Pago: {exc}") from exc
+
+
 def verify_webhook_signature(
     x_signature: str | None,
     x_request_id: str | None,

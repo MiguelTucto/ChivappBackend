@@ -1,8 +1,11 @@
+import logging
 from datetime import datetime
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
+
+from app.core.config import settings
 
 from app.api import deps
 from app.api.booking_helpers import (
@@ -42,6 +45,8 @@ from app.services.payment_evidence import (
 )
 from app.services.booking_lifecycle import remaining_balance
 from app.services import mercadopago_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
@@ -633,7 +638,8 @@ async def mercadopago_webhook(
 ):
     """
     Webhook público para notificaciones instantáneas de pago (IPN / Webhooks) de Mercado Pago.
-    Valida el pago contra el API de Mercado Pago y actualiza la reserva y el pago a 'retained'.
+    Valida la firma criptográfica HMAC (si está configurada), consulta el API de Mercado Pago
+    y actualiza la reserva y el pago a 'retained'.
     """
     # Mercado Pago puede enviar parámetros por querystring o en el body JSON
     query_params = dict(request.query_params)
@@ -651,10 +657,40 @@ async def mercadopago_webhook(
     if not topic:
         topic = body_data.get("type") or body_data.get("action")
 
+    # Validación de firma criptográfica HMAC-SHA256 si hay secreto configurado
+    x_signature = request.headers.get("x-signature")
+    x_request_id = request.headers.get("x-request-id")
+    if settings.MERCADO_PAGO_WEBHOOK_SECRET and data_id:
+        if not mercadopago_service.verify_webhook_signature(
+            x_signature=x_signature,
+            x_request_id=x_request_id,
+            data_id=str(data_id),
+        ):
+            logger.warning("Firma inválida o ausente en webhook de Mercado Pago (id: %s)", data_id)
+            return {"status": "ignored", "reason": "invalid_signature"}
+
     if not data_id:
         return {"status": "ignored", "reason": "no_data_id"}
 
-    # Si es una notificación de pago (topic == "payment" o action inicia con "payment")
+    # Manejo de notificaciones de merchant_order
+    if topic in ("merchant_order", "merchant_orders"):
+        try:
+            order_details = mercadopago_service.get_merchant_order_details(str(data_id))
+            payments = order_details.get("payments") or []
+            processed_count = 0
+            for p in payments:
+                pid = str(p.get("id"))
+                if pid:
+                    p_details = mercadopago_service.get_payment_details(pid)
+                    if p_details:
+                        mercadopago_service.process_approved_mercadopago_payment(db, p_details)
+                        processed_count += 1
+            return {"status": "ok", "merchant_order_id": str(data_id), "payments_processed": processed_count}
+        except Exception as exc:
+            logger.error("Error al procesar merchant_order %s: %s", data_id, exc)
+            return {"status": "error_logged", "order_id": str(data_id), "detail": str(exc)}
+
+    # Notificaciones estándar de pago (topic == "payment" o action "payment.*")
     payment_id = str(data_id)
     try:
         payment_details = mercadopago_service.get_payment_details(payment_id)
@@ -663,6 +699,7 @@ async def mercadopago_webhook(
             return {"status": "ok", "payment_id": payment_id, "mp_status": payment_details.get("status")}
     except Exception as exc:
         # Retornamos 200 para evitar que Mercado Pago reintente indefinidamente en caso de pagos no encontrados
+        logger.error("Error en webhook de Mercado Pago para pago %s: %s", payment_id, exc)
         return {"status": "error_logged", "payment_id": payment_id, "detail": str(exc)}
 
     return {"status": "ok", "payment_id": payment_id}
@@ -672,24 +709,37 @@ async def mercadopago_webhook(
 def check_mercadopago_payment_status(
     booking_id: str,
     payment_id: str | None = Query(None),
+    collection_id: str | None = Query(None),
     current_user: User = Depends(deps.get_current_user),
     db: Session = Depends(deps.get_db),
 ):
     """
     Verifica de manera síncrona el estado de pago de una reserva en Mercado Pago.
-    Utilizado cuando el contratista retorna al frontend con ?mp_status=approved&payment_id=...
+    Utilizado cuando el contratista retorna al frontend con ?mp_status=approved&payment_id=... o ?collection_id=...
     """
     booking = get_booking_or_404(db, booking_id)
     assert_booking_contractor_owner(db, booking, current_user)
 
-    if payment_id:
+    effective_payment_id = payment_id or collection_id
+    if not effective_payment_id:
+        # Fallback: buscar el pago más reciente asociado a esta reserva que posea gateway_payment_id
+        recent_payment = (
+            db.query(Payment)
+            .filter(Payment.booking_id == booking.id)
+            .order_by(Payment.created_at.desc())
+            .first()
+        )
+        if recent_payment and recent_payment.gateway_payment_id:
+            effective_payment_id = recent_payment.gateway_payment_id
+
+    if effective_payment_id:
         try:
-            details = mercadopago_service.get_payment_details(payment_id)
+            details = mercadopago_service.get_payment_details(effective_payment_id)
             if details:
                 mercadopago_service.process_approved_mercadopago_payment(db, details)
                 db.refresh(booking)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("No se pudo sincronizar pago %s: %s", effective_payment_id, exc)
 
     is_approved = booking.status in (
         BookingStatus.payment_retained,
@@ -700,7 +750,7 @@ def check_mercadopago_payment_status(
 
     return MercadoPagoPaymentCheckResponse(
         status="approved" if is_approved else "pending",
-        payment_id=payment_id,
+        payment_id=effective_payment_id,
         booking_status=booking.status.value,
         is_approved=is_approved,
         message=(
