@@ -7,6 +7,7 @@ from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.timezone import now_peru_naive
 from app.models.booking import Booking, BookingStatus
 from app.models.contract import Contract
 from app.models.payment import Payment, PaymentStatus
@@ -22,7 +23,7 @@ def _latest_payment(db: Session, booking_id, payment_type: str | None = None) ->
 
 def _mark_reviewed(payment: Payment, admin_user: User) -> None:
     payment.reviewed_by_user_id = admin_user.id
-    payment.reviewed_at = datetime.utcnow()
+    payment.reviewed_at = now_peru_naive()
 
 
 def validate_advance_payment(db: Session, booking: Booking, admin_user: User) -> Booking:
@@ -37,7 +38,7 @@ def validate_advance_payment(db: Session, booking: Booking, admin_user: User) ->
         raise HTTPException(400, "El pago no está pendiente de validación")
 
     payment.status = PaymentStatus.retained
-    payment.retained_at = datetime.utcnow()
+    payment.retained_at = now_peru_naive()
     _mark_reviewed(payment, admin_user)
     booking.status = BookingStatus.payment_retained
     return booking
@@ -84,7 +85,7 @@ def validate_balance_payment(db: Session, booking: Booking, admin_user: User) ->
         raise HTTPException(404, "No se encontró el comprobante del abono final")
 
     payment.status = PaymentStatus.retained
-    payment.retained_at = datetime.utcnow()
+    payment.retained_at = now_peru_naive()
     _mark_reviewed(payment, admin_user)
     booking.status = BookingStatus.in_progress
     return booking

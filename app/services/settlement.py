@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
+from app.core.timezone import now_peru_naive
+
 from sqlalchemy.orm import Session
 
 from app.models.booking import Booking, BookingStatus
@@ -156,7 +158,7 @@ def settlement_state_for_booking(
 
 
 def release_retained_payments(db: Session, booking_id) -> list[Payment]:
-    now = datetime.utcnow()
+    now = now_peru_naive()
     payments = (
         db.query(Payment)
         .filter(

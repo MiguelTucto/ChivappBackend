@@ -5,6 +5,8 @@ from html import unescape
 from io import BytesIO
 from pathlib import Path
 
+from app.core.timezone import now_peru, to_peru_datetime
+
 from xhtml2pdf import pisa
 
 from app.models.booking import Booking
@@ -123,7 +125,7 @@ def _format_price(value) -> str | None:
 
 
 def _build_musician_context(profile: MusicianProfile, user: User) -> dict[str, str]:
-    contract_date = datetime.utcnow().strftime("%d/%m/%Y")
+    contract_date = now_peru().strftime("%d/%m/%Y")
     return {
         "{{nombre_artista}}": profile.stage_name or user.fullname,
         "{{correo_artista}}": user.email,
@@ -135,7 +137,7 @@ def _build_musician_context(profile: MusicianProfile, user: User) -> dict[str, s
 
 
 def _build_contractor_context(profile: ContractorProfile, user: User) -> dict[str, str]:
-    contract_date = datetime.utcnow().strftime("%d/%m/%Y")
+    contract_date = now_peru().strftime("%d/%m/%Y")
     return {
         "{{nombre_cliente}}": user.fullname,
         "{{documento_cliente}}": profile.document_number or "—",
@@ -292,7 +294,7 @@ def _pdf_bytes_from_html(html: str) -> bytes:
 
 def _write_pdf_bytes(filename_prefix: str, pdf_bytes: bytes) -> str:
     ensure_upload_dir()
-    filename = f"{filename_prefix}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.pdf"
+    filename = f"{filename_prefix}-{now_peru().strftime('%Y%m%d%H%M%S')}.pdf"
     destination = ensure_upload_dir() / filename
     destination.write_bytes(pdf_bytes)
     return f"/uploads/{filename}"
@@ -431,7 +433,12 @@ def render_contract_pdf_bytes(
             missing_message="No se encontró la imagen de firma del contratista",
         )
         if signed_at is not None:
-            signed_at_label = signed_at.strftime("%d/%m/%Y %H:%M UTC")
+            peru_signed_at = to_peru_datetime(signed_at)
+            signed_at_label = (
+                peru_signed_at.strftime("%d/%m/%Y %H:%M (Hora Perú)")
+                if peru_signed_at
+                else signed_at.strftime("%d/%m/%Y %H:%M")
+            )
             acceptance_lines = [
                 "<b>Aceptación de términos y condiciones</b>",
                 (

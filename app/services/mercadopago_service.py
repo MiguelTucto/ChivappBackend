@@ -76,11 +76,11 @@ def create_preference(
 
     # Effective payer email resolution:
     effective_email = (payer_email or "").strip() or contractor_user.email
-    # If using test credentials and email is not a test user, fallback to test buyer
-    # to avoid Mercado Pago Sandbox "self-payment / live email in sandbox" rejection
-    if "@testuser.com" not in effective_email:
-        if settings.MERCADO_PAGO_ACCESS_TOKEN.startswith("TEST-") or "3671163102" in settings.MERCADO_PAGO_ACCESS_TOKEN:
-            effective_email = "test@testuser.com"
+    # Only in sandbox mode fallback to test buyer to avoid Mercado Pago self-payment rejection
+    if settings.MERCADO_PAGO_SANDBOX:
+        if "@testuser.com" not in effective_email:
+            if settings.MERCADO_PAGO_ACCESS_TOKEN.startswith("TEST-") or "3671163102" in settings.MERCADO_PAGO_ACCESS_TOKEN:
+                effective_email = "test@testuser.com"
 
     payload: dict[str, Any] = {
         "items": [
@@ -135,7 +135,7 @@ def create_preference(
             return {
                 "preference_id": data.get("id"),
                 "init_point": data.get("init_point"),
-                "sandbox_init_point": data.get("sandbox_init_point"),
+                "sandbox_init_point": data.get("sandbox_init_point") if settings.MERCADO_PAGO_SANDBOX else None,
                 "public_key": settings.MERCADO_PAGO_PUBLIC_KEY,
                 "amount": round(float(amount), 2),
                 "currency": "PEN",
@@ -320,9 +320,10 @@ def process_direct_payment(
     description = f"ChivApp: {booking.event_type} - {musician_name} (Reserva #{str(booking.id)[:8]})"
 
     payer_email = payment_payload.get("payer_email") or contractor_user.email
-    if "@testuser.com" not in (payer_email or ""):
-        if settings.MERCADO_PAGO_ACCESS_TOKEN.startswith("TEST-") or "3671163102" in settings.MERCADO_PAGO_ACCESS_TOKEN:
-            payer_email = "test@testuser.com"
+    if settings.MERCADO_PAGO_SANDBOX:
+        if "@testuser.com" not in (payer_email or ""):
+            if settings.MERCADO_PAGO_ACCESS_TOKEN.startswith("TEST-") or "3671163102" in settings.MERCADO_PAGO_ACCESS_TOKEN:
+                payer_email = "test@testuser.com"
 
     payer_data: dict[str, Any] = {
         "email": payer_email,

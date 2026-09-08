@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
+from app.core.timezone import PERU_TIMEZONE, combine_peru_datetime, now_peru
 from app.models.booking import Booking, BookingStatus
 from app.models.payment import Payment, PaymentStatus
 
@@ -19,12 +20,18 @@ CONFIRMED_LIKE = {
 
 
 def booking_event_datetime(booking: Booking) -> datetime:
-    return datetime.combine(booking.event_date, booking.start_time)
+    return combine_peru_datetime(booking.event_date, booking.start_time)
 
 
 def is_event_started(booking: Booking, *, now: datetime | None = None) -> bool:
-    current = now or datetime.utcnow()
-    return current >= booking_event_datetime(booking)
+    event_dt = booking_event_datetime(booking)
+    if now is None:
+        current = now_peru()
+    elif now.tzinfo is None:
+        current = now.replace(tzinfo=PERU_TIMEZONE)
+    else:
+        current = now.astimezone(PERU_TIMEZONE)
+    return current >= event_dt
 
 
 def is_pre_event(booking: Booking, *, now: datetime | None = None) -> bool:

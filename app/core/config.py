@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     OAUTH_REDIRECT_BASE_URL: str = "http://localhost:3000/api/v1"
     FRONTEND_URL: str = "http://localhost:3000"
 
-    RESEND_API_KEY: str = ""
-    EMAIL_FROM: str = "ChivApp <onboarding@resend.dev>"
+    BREVO_API_KEY: str = ""
+    EMAIL_FROM: str = "ChivApp <miguel2cto@gmail.com>"
     EMAIL_ENABLED: bool = True
 
     # Rate Limiting

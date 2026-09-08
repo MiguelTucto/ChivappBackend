@@ -61,6 +61,67 @@ def notify_booking_created(db: Session, musician_user: User, booking_id: str) ->
         booking_id=booking_id,
     )
 
+    # Envío de correo transaccional enriquecido al músico
+    try:
+        from app.core.config import settings
+        from app.models.booking import Booking
+        from app.models.contractor_profile import ContractorProfile
+        from app.services.email.defaults import APP_NAME
+        from app.services.email.service import send_templated_email
+
+        booking = db.query(Booking).filter(Booking.id == booking_id).first()
+        if booking and musician_user.email and not musician_user.email.endswith("@guest.local"):
+            contractor_name = "Cliente"
+            if booking.contractor_id:
+                contractor = (
+                    db.query(ContractorProfile)
+                    .filter(ContractorProfile.id == booking.contractor_id)
+                    .first()
+                )
+                if contractor and contractor.user and contractor.user.fullname:
+                    contractor_name = contractor.user.fullname
+
+            event_date_str = (
+                booking.event_date.strftime("%d/%m/%Y")
+                if booking.event_date
+                else "Por coordinar"
+            )
+            event_time_str = (
+                booking.start_time.strftime("%H:%M")
+                if booking.start_time
+                else "Por coordinar"
+            )
+            location_str = booking.location_address or "Por definir"
+            if booking.location_city:
+                location_str = f"{location_str}, {booking.location_city}"
+
+            action_url = f"{settings.FRONTEND_URL.rstrip('/')}/musician/bookings/{booking_id}"
+
+            send_templated_email(
+                db,
+                slug="booking_new_request",
+                to=musician_user.email,
+                context={
+                    "musician_name": musician_user.fullname or "Músico",
+                    "contractor_name": contractor_name,
+                    "event_type": booking.event_type or "Presentación musical",
+                    "event_date": event_date_str,
+                    "event_time": event_time_str,
+                    "event_location": location_str,
+                    "event_description": booking.event_description or "Sin detalles adicionales",
+                    "action_url": action_url,
+                    "app_name": APP_NAME,
+                },
+                user_id=musician_user.id,
+                meta={"booking_id": booking_id},
+            )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Error enviando correo de nueva solicitud de reserva: %s", exc
+        )
+
+
 
 def notify_booking_updated(db: Session, musician_user: User, booking_id: str) -> None:
     notify_user(
