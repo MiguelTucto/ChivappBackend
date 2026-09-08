@@ -367,7 +367,8 @@ def get_contractor_expenses(
     )
 
 
-@router.post("/", response_model=PaymentOut, status_code=201)
+@router.post("", response_model=PaymentOut, status_code=201)
+@router.post("/", response_model=PaymentOut, status_code=201, include_in_schema=False)
 def create_payment(
     payload: PaymentCreate,
     current_user: User = Depends(deps.get_current_user),

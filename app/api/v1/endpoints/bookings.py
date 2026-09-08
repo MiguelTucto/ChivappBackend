@@ -95,7 +95,8 @@ def _load_contractor_user(db: Session, contractor_id) -> User:
     return user
 
 
-@router.post("/", response_model=BookingOut, status_code=201)
+@router.post("", response_model=BookingOut, status_code=201)
+@router.post("/", response_model=BookingOut, status_code=201, include_in_schema=False)
 def create_booking(
     payload: BookingCreate,
     current_user: User = Depends(deps.get_current_user),
@@ -224,7 +225,8 @@ def attach_contractor_signature(
     )
 
 
-@router.get("/", response_model=list[BookingOut])
+@router.get("", response_model=list[BookingOut])
+@router.get("/", response_model=list[BookingOut], include_in_schema=False)
 def list_bookings(
     current_user: User = Depends(deps.get_current_user),
     db: Session = Depends(deps.get_db),

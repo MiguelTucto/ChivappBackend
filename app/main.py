@@ -7,6 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
 from app.api import deps
 from app.api.v1.api import api_router
 from app.core.config import settings
@@ -25,6 +27,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
 )
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
