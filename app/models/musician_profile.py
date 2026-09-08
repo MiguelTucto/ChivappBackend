@@ -74,7 +74,18 @@ class MusicianProfile(Base):
     # Firma digital del músico (configurada en perfil; alimenta sus contratas).
     signature_image_url = Column(String, nullable=True)
 
+    # Datos para cobro / desembolsos (Opción 2: Transferencias / Mercado Pago / Yape / Plin)
+    payout_method = Column(String, nullable=True)  # "bank_transfer", "yape_plin", "mercadopago"
+    payout_bank_name = Column(String, nullable=True)  # "BCP", "BBVA", "Interbank", etc.
+    payout_account_number = Column(String, nullable=True)
+    payout_cci = Column(String, nullable=True)
+    payout_phone = Column(String, nullable=True)
+    payout_beneficiary_name = Column(String, nullable=True)
+    payout_beneficiary_document = Column(String, nullable=True)
+    payout_mp_email = Column(String, nullable=True)
+
     status = Column(
+
         Enum(ProfileStatus),
         nullable=False,
         default=ProfileStatus.draft,

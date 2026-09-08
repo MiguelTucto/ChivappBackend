@@ -99,6 +99,17 @@ class BookingComplaintOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MusicianPayoutInfoOut(BaseModel):
+    payout_method: str | None = None
+    payout_bank_name: str | None = None
+    payout_account_number: str | None = None
+    payout_cci: str | None = None
+    payout_phone: str | None = None
+    payout_beneficiary_name: str | None = None
+    payout_beneficiary_document: str | None = None
+    payout_mp_email: str | None = None
+
+
 class AdminSettlementOut(BaseModel):
     booking_id: UUID
     event_type: str
@@ -112,16 +123,30 @@ class AdminSettlementOut(BaseModel):
     platform_fee_on_retained: float = 0
     currency: str = "PEN"
     musician_name: str | None = None
+    musician_id: UUID | None = None
     contractor_name: str | None = None
     booking_status: str
     settlement_state: str
     complaint: BookingComplaintOut | None = None
+    musician_payout_info: MusicianPayoutInfoOut | None = None
+    payout_reference: str | None = None
+    payout_evidence_url: str | None = None
+    payout_notes: str | None = None
+
+
+class AdminReleaseSettlement(BaseModel):
+    payout_reference: str | None = Field(default=None, max_length=100)
+    payout_evidence_url: str | None = Field(default=None, max_length=500)
+    payout_notes: str | None = Field(default=None, max_length=2000)
 
 
 class AdminSettleBooking(BaseModel):
     musician_amount: float = Field(ge=0)
     contractor_refund: float = Field(ge=0)
     notes: str | None = Field(default=None, max_length=2000)
+    payout_reference: str | None = Field(default=None, max_length=100)
+    payout_evidence_url: str | None = Field(default=None, max_length=500)
+
 
 
 class AdminRefundTransfer(BaseModel):

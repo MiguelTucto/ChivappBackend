@@ -6,6 +6,7 @@ import logging
 import httpx
 
 from app.core.config import settings
+from app.services.email.logo import LOGO_CID, LOGO_FILENAME, get_logo_base64
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,18 @@ def send_via_brevo(
     if recipient_name and recipient_name.strip():
         recipient_payload["name"] = recipient_name.strip()
 
-    payload = {
+    attachments: list[dict] = []
+    logo_b64 = get_logo_base64()
+    if f"cid:{LOGO_CID}" in html and logo_b64:
+        attachments.append(
+            {
+                "name": LOGO_FILENAME,
+                "content": logo_b64,
+                "cid": LOGO_CID,
+            }
+        )
+
+    payload: dict = {
         "sender": {
             "name": sender_name,
             "email": sender_email,
@@ -57,6 +69,8 @@ def send_via_brevo(
         "htmlContent": html,
         "textContent": text,
     }
+    if attachments:
+        payload["attachment"] = attachments
 
     try:
         with httpx.Client(timeout=20.0) as client:

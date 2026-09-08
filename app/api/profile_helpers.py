@@ -71,6 +71,18 @@ def _profile_values_equal(current, incoming) -> bool:
     return current == incoming
 
 
+NON_DEMOTING_FIELDS = {
+    "payout_method",
+    "payout_bank_name",
+    "payout_account_number",
+    "payout_cci",
+    "payout_phone",
+    "payout_beneficiary_name",
+    "payout_beneficiary_document",
+    "payout_mp_email",
+}
+
+
 def demote_published_profile_if_changed(profile, updates: dict) -> bool:
     """If a published profile receives real changes, return it to draft for re-review."""
     was_published = profile.status == ProfileStatus.published
@@ -78,7 +90,8 @@ def demote_published_profile_if_changed(profile, updates: dict) -> bool:
     for field, value in updates.items():
         current = getattr(profile, field, None)
         if not _profile_values_equal(current, value):
-            changed = True
+            if field not in NON_DEMOTING_FIELDS:
+                changed = True
         setattr(profile, field, value)
 
     if changed and was_published:
@@ -89,6 +102,7 @@ def demote_published_profile_if_changed(profile, updates: dict) -> bool:
             profile.user.is_verified = False
         return True
     return False
+
 
 
 def demote_published_profile(profile) -> bool:

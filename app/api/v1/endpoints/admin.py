@@ -32,9 +32,13 @@ from app.schemas.payment import PaymentOut
 from app.schemas.support import AdminSupportTicketOut, SupportTicketRespond
 from app.schemas.settlement import (
     AdminRefundTransfer,
+    AdminReleaseSettlement,
+    AdminSettlementOut,
+    MusicianPayoutInfoOut,
     PlatformPaymentInstructionsOut,
     PlatformPaymentInstructionsUpdate,
 )
+
 from app.schemas.profiles import (
     ContractorProfileAdminOut,
     MusicianProfileAdminOut,
@@ -1125,7 +1129,7 @@ def list_admin_settlements(
     from decimal import Decimal
 
     from app.models.booking_complaint import BookingComplaint
-    from app.schemas.settlement import AdminSettlementOut
+    from app.schemas.settlement import AdminSettlementOut, MusicianPayoutInfoOut
     from app.services.platform_payment import musician_portion_of_paid
     from app.services.settlement import (
         fee_portion_from_gross,
@@ -1175,6 +1179,27 @@ def list_admin_settlements(
             continue
         musician = booking.musician
         contractor = booking.contractor
+
+        payout_info = None
+        if musician:
+            payout_info = MusicianPayoutInfoOut(
+                payout_method=musician.payout_method,
+                payout_bank_name=musician.payout_bank_name,
+                payout_account_number=musician.payout_account_number,
+                payout_cci=musician.payout_cci,
+                payout_phone=musician.payout_phone,
+                payout_beneficiary_name=musician.payout_beneficiary_name,
+                payout_beneficiary_document=musician.payout_beneficiary_document,
+                payout_mp_email=musician.payout_mp_email,
+            )
+
+        latest_payment = (
+            db.query(Payment)
+            .filter(Payment.booking_id == booking.id)
+            .order_by(Payment.created_at.desc())
+            .first()
+        )
+
         items.append(
             AdminSettlementOut(
                 booking_id=booking.id,
@@ -1196,12 +1221,17 @@ def list_admin_settlements(
                     if musician and musician.stage_name
                     else (musician.user.fullname if musician and musician.user else None)
                 ),
+                musician_id=musician.id if musician else None,
                 contractor_name=(
                     contractor.user.fullname if contractor and contractor.user else None
                 ),
                 booking_status=booking.status.value,
                 settlement_state=settlement_state,
                 complaint=serialize_complaint(complaint),
+                musician_payout_info=payout_info,
+                payout_reference=latest_payment.payout_reference if latest_payment else None,
+                payout_evidence_url=latest_payment.payout_evidence_url if latest_payment else None,
+                payout_notes=latest_payment.payout_notes if latest_payment else None,
             )
         )
         if len(items) >= limit:
@@ -1210,7 +1240,143 @@ def list_admin_settlements(
     return items
 
 
+@router.get("/settlements/export")
+def export_admin_settlements(
+    _: User = Depends(deps.get_current_admin),
+    db: Session = Depends(deps.get_db),
+    state: str | None = Query(default=None),
+):
+    import csv
+    import io
+    from decimal import Decimal
+    from fastapi.responses import Response
+    from app.core.timezone import now_peru_naive
+    from app.models.booking_complaint import BookingComplaint
+    from app.services.platform_payment import musician_portion_of_paid
+    from app.services.settlement import (
+        released_total_for_booking,
+        retained_total_for_booking,
+        settlement_state_for_booking,
+    )
+
+    bookings = (
+        db.query(Booking)
+        .options(
+            joinedload(Booking.musician).joinedload(MusicianProfile.user),
+            joinedload(Booking.contractor).joinedload(ContractorProfile.user),
+        )
+        .filter(Booking.status == BookingStatus.completed)
+        .order_by(Booking.updated_at.desc())
+        .all()
+    )
+    complaints = (
+        db.query(BookingComplaint)
+        .filter(BookingComplaint.booking_id.in_([b.id for b in bookings]) if bookings else False)
+        .all()
+        if bookings
+        else []
+    )
+    complaint_by_id = {c.booking_id: c for c in complaints}
+
+    output = io.StringIO()
+    output.write("\ufeff")
+    writer = csv.writer(output, dialect="excel")
+    writer.writerow([
+        "ID Reserva",
+        "Fecha Evento",
+        "Tipo Evento",
+        "Ciudad",
+        "Músico / Agrupación",
+        "Monto a Desembolsar (S/)",
+        "Método de Desembolso",
+        "Banco",
+        "Número de Cuenta",
+        "CCI",
+        "Celular Yape/Plin",
+        "Titular Cuenta",
+        "Documento Titular (DNI/RUC)",
+        "Email Mercado Pago",
+        "Contratante",
+        "Estado Liquidación",
+        "Referencia Operación",
+        "Notas",
+    ])
+
+    for booking in bookings:
+        retained_gross = retained_total_for_booking(db, booking.id)
+        released_gross = released_total_for_booking(db, booking.id)
+        retained = float(
+            musician_portion_of_paid(booking, Decimal(str(retained_gross)))
+        )
+        released = float(
+            musician_portion_of_paid(booking, Decimal(str(released_gross)))
+        )
+        complaint = complaint_by_id.get(booking.id)
+        settlement_state = settlement_state_for_booking(
+            booking, complaint, retained, released
+        )
+        if settlement_state in {"none", "in_progress"}:
+            continue
+        if state and settlement_state != state:
+            continue
+
+        musician = booking.musician
+        contractor = booking.contractor
+        musician_name = (
+            musician.stage_name
+            if musician and musician.stage_name
+            else (musician.user.fullname if musician and musician.user else "")
+        )
+        contractor_name = (
+            contractor.user.fullname if contractor and contractor.user else ""
+        )
+        payout_amount = retained if retained > 0 else released
+
+        latest_payment = (
+            db.query(Payment)
+            .filter(Payment.booking_id == booking.id)
+            .order_by(Payment.created_at.desc())
+            .first()
+        )
+
+        payout_method_label = {
+            "bank_transfer": "Transferencia Bancaria",
+            "yape_plin": "Yape / Plin",
+            "mercadopago": "Mercado Pago",
+        }.get(musician.payout_method if musician else "", musician.payout_method if musician and musician.payout_method else "No registrado")
+
+        writer.writerow([
+            str(booking.id),
+            str(booking.event_date),
+            booking.event_type or "",
+            booking.location_city or "",
+            musician_name,
+            f"{payout_amount:.2f}",
+            payout_method_label,
+            musician.payout_bank_name if musician else "",
+            musician.payout_account_number if musician else "",
+            musician.payout_cci if musician else "",
+            musician.payout_phone if musician else "",
+            musician.payout_beneficiary_name if musician else "",
+            musician.payout_beneficiary_document if musician else "",
+            musician.payout_mp_email if musician else "",
+            contractor_name,
+            settlement_state,
+            latest_payment.payout_reference if latest_payment and latest_payment.payout_reference else "",
+            latest_payment.payout_notes if latest_payment and latest_payment.payout_notes else "",
+        ])
+
+    csv_data = output.getvalue().encode("utf-8-sig")
+    date_str = now_peru_naive().strftime("%Y%m%d_%H%M")
+    headers = {
+        "Content-Disposition": f'attachment; filename="liquidaciones_chivapp_{date_str}.csv"',
+        "Content-Type": "text/csv; charset=utf-8",
+    }
+    return Response(content=csv_data, headers=headers, media_type="text/csv")
+
+
 @router.post("/settlements/{booking_id}/settle")
+
 def settle_admin_booking(
     booking_id: str,
     payload: AdminSettleBooking,
@@ -1296,7 +1462,13 @@ def settle_admin_booking(
             "Sin queja no aplica reembolso al contratista. Desembolsa el total al músico.",
         )
 
-    release_retained_payments(db, booking.id)
+    release_retained_payments(
+        db,
+        booking.id,
+        payout_reference=body.payout_reference,
+        payout_evidence_url=body.payout_evidence_url,
+        payout_notes=body.notes,
+    )
 
     musician = (
         db.query(MusicianProfile)
@@ -1327,6 +1499,21 @@ def settle_admin_booking(
         musician_portion_of_paid(booking, Decimal(str(released_gross)))
     )
     complaint_out = serialize_complaint(complaint)
+
+    payout_info = None
+    if musician:
+        from app.schemas.settlement import MusicianPayoutInfoOut
+        payout_info = MusicianPayoutInfoOut(
+            payout_method=musician.payout_method,
+            payout_bank_name=musician.payout_bank_name,
+            payout_account_number=musician.payout_account_number,
+            payout_cci=musician.payout_cci,
+            payout_phone=musician.payout_phone,
+            payout_beneficiary_name=musician.payout_beneficiary_name,
+            payout_beneficiary_document=musician.payout_beneficiary_document,
+            payout_mp_email=musician.payout_mp_email,
+        )
+
     return AdminSettlementOut(
         booking_id=booking.id,
         event_type=booking.event_type,
@@ -1345,13 +1532,149 @@ def settle_admin_booking(
             if musician and musician.stage_name
             else (musician.user.fullname if musician and musician.user else None)
         ),
+        musician_id=musician.id if musician else None,
         contractor_name=(
             contractor.user.fullname if contractor and contractor.user else None
         ),
         booking_status=booking.status.value,
         settlement_state=settlement_state_for_booking(booking, complaint, 0, released),
         complaint=complaint_out,
+        musician_payout_info=payout_info,
+        payout_reference=body.payout_reference,
+        payout_evidence_url=body.payout_evidence_url,
+        payout_notes=body.notes,
     )
+
+
+@router.post("/settlements/{booking_id}/release", response_model=AdminSettlementOut)
+def release_admin_settlement(
+    booking_id: str,
+    payload: AdminReleaseSettlement = None,
+    current_user: User = Depends(deps.get_current_admin),
+    db: Session = Depends(deps.get_db),
+):
+    from decimal import Decimal
+    from uuid import UUID
+
+    from app.models.booking_complaint import BookingComplaint, BookingComplaintStatus
+    from app.schemas.settlement import AdminSettlementOut, MusicianPayoutInfoOut
+    from app.services.booking_notifications import notify_settlement_completed
+    from app.services.platform_payment import musician_portion_of_paid
+    from app.services.settlement import (
+        release_retained_payments,
+        released_total_for_booking,
+        retained_total_for_booking,
+        serialize_complaint,
+        settlement_state_for_booking,
+    )
+
+    body = payload or AdminReleaseSettlement()
+    booking = db.get(Booking, UUID(booking_id))
+    if not booking:
+        raise HTTPException(404, "Reserva no encontrada")
+    if booking.status != BookingStatus.completed:
+        raise HTTPException(400, "Solo se liquidan reservas finalizadas")
+
+    complaint = (
+        db.query(BookingComplaint)
+        .filter(BookingComplaint.booking_id == booking.id)
+        .first()
+    )
+    if complaint and complaint.status != BookingComplaintStatus.settled:
+        raise HTTPException(
+            400,
+            "Esta reserva tiene un reclamo activo. Liquídala a través del flujo de reclamos.",
+        )
+
+    retained_gross = retained_total_for_booking(db, booking.id)
+    if retained_gross <= 0:
+        raise HTTPException(400, "No hay fondos retenidos para liquidar")
+
+    musician_amount = float(
+        musician_portion_of_paid(booking, Decimal(str(retained_gross)))
+    )
+
+    release_retained_payments(
+        db,
+        booking.id,
+        payout_reference=body.payout_reference,
+        payout_evidence_url=body.payout_evidence_url,
+        payout_notes=body.payout_notes,
+    )
+
+    musician = (
+        db.query(MusicianProfile)
+        .options(joinedload(MusicianProfile.user))
+        .filter(MusicianProfile.id == booking.musician_id)
+        .first()
+    )
+    contractor = (
+        db.query(ContractorProfile)
+        .options(joinedload(ContractorProfile.user))
+        .filter(ContractorProfile.id == booking.contractor_id)
+        .first()
+    )
+    if musician and musician.user and contractor and contractor.user:
+        notify_settlement_completed(
+            db,
+            musician_user=musician.user,
+            contractor_user=contractor.user,
+            booking_id=str(booking.id),
+            musician_amount=musician_amount,
+            contractor_refund=0.0,
+        )
+
+    db.commit()
+
+    released_gross = released_total_for_booking(db, booking.id)
+    released = float(
+        musician_portion_of_paid(booking, Decimal(str(released_gross)))
+    )
+
+    payout_info = None
+    if musician:
+        payout_info = MusicianPayoutInfoOut(
+            payout_method=musician.payout_method,
+            payout_bank_name=musician.payout_bank_name,
+            payout_account_number=musician.payout_account_number,
+            payout_cci=musician.payout_cci,
+            payout_phone=musician.payout_phone,
+            payout_beneficiary_name=musician.payout_beneficiary_name,
+            payout_beneficiary_document=musician.payout_beneficiary_document,
+            payout_mp_email=musician.payout_mp_email,
+        )
+
+    return AdminSettlementOut(
+        booking_id=booking.id,
+        event_type=booking.event_type,
+        event_date=booking.event_date,
+        location_city=booking.location_city,
+        price_agreed=(
+            float(booking.price_agreed) if booking.price_agreed is not None else None
+        ),
+        retained_total=0,
+        released_total=released,
+        retained_gross=0,
+        released_gross=released_gross,
+        platform_fee_on_retained=0,
+        musician_name=(
+            musician.stage_name
+            if musician and musician.stage_name
+            else (musician.user.fullname if musician and musician.user else None)
+        ),
+        musician_id=musician.id if musician else None,
+        contractor_name=(
+            contractor.user.fullname if contractor and contractor.user else None
+        ),
+        booking_status=booking.status.value,
+        settlement_state=settlement_state_for_booking(booking, complaint, 0, released),
+        complaint=serialize_complaint(complaint),
+        musician_payout_info=payout_info,
+        payout_reference=body.payout_reference,
+        payout_evidence_url=body.payout_evidence_url,
+        payout_notes=body.payout_notes,
+    )
+
 
 
 @router.post("/settlements/{booking_id}/refund-transfer")

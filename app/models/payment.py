@@ -43,7 +43,13 @@ class Payment(Base):
     reviewed_at = Column(DateTime, nullable=True)
     rejection_reason = Column(String, nullable=True)
 
+    # Datos de desembolso al músico (liquidación realizada por admin / Mercado Pago)
+    payout_reference = Column(String, nullable=True)
+    payout_evidence_url = Column(String, nullable=True)
+    payout_notes = Column(String, nullable=True)
+
     # Integración pasarela de pagos (Mercado Pago, etc.)
+
     gateway_provider = Column(String, nullable=True)
     gateway_payment_id = Column(String, nullable=True, index=True)
     gateway_preference_id = Column(String, nullable=True)

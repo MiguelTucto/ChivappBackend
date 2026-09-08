@@ -23,6 +23,8 @@ from app.models.profile_status import ProfileStatus
 from app.models.user import User, UserRole
 from app.schemas.auth import (
     ChangePasswordRequest,
+    GoogleAuthResponse,
+    GoogleCredentialRequest,
     LoginRequest,
     OAuthAccountOut,
     OAuthAccountsOut,
@@ -55,10 +57,13 @@ from app.services.ensemble_members import (
     notify_leader_member_joined,
 )
 from app.services.oauth import (
+    _provider_or_400,
     build_authorize_url,
     create_oauth_state,
     exchange_code_for_profile,
+    oauth_configured,
     parse_oauth_state,
+    verify_google_id_token,
 )
 from app.services.uniqueness import (
     assert_email_unique,
@@ -66,6 +71,8 @@ from app.services.uniqueness import (
     assert_phone_unique,
     assert_stage_name_unique,
     assert_username_unique,
+    next_available_musician_slug,
+    next_available_stage_name,
     slugify,
 )
 
@@ -74,12 +81,16 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 OAUTH_PENDING_COOKIE = "oauth_pending"
 
 
+def _is_secure_cookie() -> bool:
+    return settings.FRONTEND_URL.startswith("https://")
+
+
 def _set_auth_cookie(response: Response, token: str) -> None:
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,
+        secure=_is_secure_cookie(),
         samesite="lax",
         path="/",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
@@ -91,7 +102,7 @@ def _clear_auth_cookie(response: Response) -> None:
         key="access_token",
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=_is_secure_cookie(),
         path="/",
     )
 
@@ -101,7 +112,7 @@ def _set_oauth_pending_cookie(response: Response, token: str) -> None:
         key=OAUTH_PENDING_COOKIE,
         value=token,
         httponly=True,
-        secure=False,
+        secure=_is_secure_cookie(),
         samesite="lax",
         path="/",
         max_age=30 * 60,
@@ -113,7 +124,7 @@ def _clear_oauth_pending_cookie(response: Response) -> None:
         key=OAUTH_PENDING_COOKIE,
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=_is_secure_cookie(),
         path="/",
     )
 
@@ -193,13 +204,12 @@ def _link_oauth_account(
 
 def _create_role_profile(db: Session, user: User) -> None:
     if user.role == UserRole.musician:
-        slug = user.username or (slugify(user.fullname) if user.fullname else None)
-        if slug:
-            assert_musician_slug_unique(db, slug)
+        stage_name = next_available_stage_name(db, user.fullname) if user.fullname else None
+        slug = user.username or (next_available_musician_slug(db, stage_name) if stage_name else None)
         db.add(
             MusicianProfile(
                 user_id=user.id,
-                stage_name=user.fullname,
+                stage_name=stage_name,
                 slug=slug,
                 status=ProfileStatus.draft,
                 availability_type=AvailabilityType.both,
@@ -430,6 +440,15 @@ def oauth_start(
     intent: str = Query(default="login", pattern="^(login|link)$"),
     db: Session = Depends(deps.get_db),
 ):
+    try:
+        p = _provider_or_400(provider)
+        if not oauth_configured(p):
+            return _frontend_redirect(
+                "/login", {"oauth_error": f"{p.value}_not_configured"}
+            )
+    except HTTPException:
+        return _frontend_redirect("/login", {"oauth_error": "unsupported_provider"})
+
     link_user_id = None
     if intent == "link":
         user = _optional_user(request, db)
@@ -641,6 +660,98 @@ def oauth_complete(
     access = _issue_login(response, user)
     db.commit()
     return {"access_token": access}
+
+
+@router.post("/oauth/google/credential", response_model=GoogleAuthResponse)
+async def oauth_google_credential(
+    payload: GoogleCredentialRequest,
+    request: Request,
+    response: Response,
+    db: Session = Depends(deps.get_db),
+):
+    profile = await verify_google_id_token(payload.credential)
+
+    if payload.intent == "link":
+        user = _optional_user(request, db)
+        if not user:
+            raise HTTPException(401, "Debes iniciar sesión para vincular tu cuenta")
+        _link_oauth_account(
+            db,
+            user=user,
+            provider=profile.provider,
+            provider_user_id=profile.provider_user_id,
+            email=profile.email,
+        )
+        if profile.picture_url and not user.profile_picture_url:
+            user.profile_picture_url = profile.picture_url
+        db.commit()
+        return GoogleAuthResponse(status="linked", role=user.role.value)
+
+    # 1. Existing OAuth account
+    existing_oauth = (
+        db.query(OAuthAccount)
+        .filter(
+            OAuthAccount.provider == profile.provider,
+            OAuthAccount.provider_user_id == profile.provider_user_id,
+        )
+        .first()
+    )
+    if existing_oauth:
+        user = db.get(User, existing_oauth.user_id)
+        if not user:
+            raise HTTPException(404, "Usuario no encontrado")
+        if not user.email_verified_at:
+            user.email_verified_at = datetime.utcnow()
+        token = _issue_login(response, user)
+        db.commit()
+        return GoogleAuthResponse(
+            status="logged_in",
+            access_token=token,
+            redirect_url=_post_login_path(user),
+            role=user.role.value,
+        )
+
+    # 2. Existing user by email
+    user_by_email = None
+    if profile.email:
+        user_by_email = db.query(User).filter(User.email == profile.email).first()
+
+    if user_by_email:
+        _link_oauth_account(
+            db,
+            user=user_by_email,
+            provider=profile.provider,
+            provider_user_id=profile.provider_user_id,
+            email=profile.email,
+        )
+        if profile.picture_url and not user_by_email.profile_picture_url:
+            user_by_email.profile_picture_url = profile.picture_url
+        if not user_by_email.email_verified_at:
+            user_by_email.email_verified_at = datetime.utcnow()
+        token = _issue_login(response, user_by_email)
+        db.commit()
+        return GoogleAuthResponse(
+            status="logged_in",
+            access_token=token,
+            redirect_url=_post_login_path(user_by_email),
+            role=user_by_email.role.value,
+        )
+
+    # 3. New user -> pending role
+    pending = create_oauth_pending_token(
+        {
+            "provider": profile.provider.value,
+            "provider_user_id": profile.provider_user_id,
+            "email": profile.email,
+            "fullname": profile.fullname,
+            "picture_url": profile.picture_url,
+        }
+    )
+    _set_oauth_pending_cookie(response, pending)
+    return GoogleAuthResponse(
+        status="pending_role",
+        redirect_url="/complete-role",
+    )
 
 
 @router.get("/oauth/accounts", response_model=OAuthAccountsOut)

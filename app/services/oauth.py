@@ -181,3 +181,34 @@ async def _facebook_profile(code: str) -> OAuthProfile:
         fullname=name,
         picture_url=picture,
     )
+
+
+async def verify_google_id_token(id_token: str) -> OAuthProfile:
+    """Verifica un ID Token de Google (emitido por Google Identity Services / One Tap / Credential)."""
+    token_url = "https://oauth2.googleapis.com/tokeninfo"
+    async with httpx.AsyncClient(timeout=15) as client:
+        try:
+            res = await client.get(token_url, params={"id_token": id_token})
+        except httpx.HTTPError as exc:
+            raise HTTPException(502, f"Error conectando con Google: {exc}") from exc
+
+        if res.status_code >= 400:
+            raise HTTPException(400, "Token de Google inválido o expirado")
+        data = res.json()
+
+    aud = data.get("aud")
+    if settings.GOOGLE_CLIENT_ID and aud != settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(400, "El token de Google no corresponde a esta aplicación")
+
+    sub = data.get("sub")
+    if not sub:
+        raise HTTPException(400, "Perfil de Google incompleto")
+    email = data.get("email")
+    name = data.get("name") or data.get("given_name") or (email.split("@")[0] if email else "Usuario")
+    return OAuthProfile(
+        provider=OAuthProvider.google,
+        provider_user_id=str(sub),
+        email=email.lower().strip() if email else None,
+        fullname=name,
+        picture_url=data.get("picture"),
+    )

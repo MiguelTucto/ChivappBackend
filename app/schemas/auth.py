@@ -61,3 +61,15 @@ class OAuthPendingOut(BaseModel):
     fullname: str
     provider: str
     picture_url: str | None = None
+
+
+class GoogleCredentialRequest(BaseModel):
+    credential: str
+    intent: str = "login"
+
+
+class GoogleAuthResponse(BaseModel):
+    status: str
+    access_token: str | None = None
+    redirect_url: str | None = None
+    role: str | None = None

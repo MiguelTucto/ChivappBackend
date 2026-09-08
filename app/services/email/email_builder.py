@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from app.services.email.logo import LOGO_CID, LOGO_PUBLIC_URL
+
 APP_NAME = "Chivapp"
 APP_URL = "https://chiv.app"
-APP_LOGO_URL = "https://chiv.app/logo-chivapp.png"
+APP_LOGO_URL = LOGO_PUBLIC_URL
+APP_LOGO_SRC = f"cid:{LOGO_CID}"
 
 
 def build_email_layout(
@@ -87,7 +90,7 @@ def build_email_layout(
                 <tr>
                   <td align="left" valign="middle">
                     <a href="{APP_URL}" target="_blank" style="text-decoration: none; display: inline-block;">
-                      <img src="{APP_LOGO_URL}" alt="{APP_NAME}" height="32" style="display: block; height: 32px; width: auto; max-height: 32px; border: 0; outline: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 800; color: #0F172A;" />
+                      <img src="{APP_LOGO_SRC}" alt="{APP_NAME}" width="107" height="34" style="display: block; width: 107px; height: 34px; max-height: 34px; border: 0; outline: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 800; color: #0F172A;" />
                     </a>
                   </td>
                   <td align="right" valign="middle">

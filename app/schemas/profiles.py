@@ -70,6 +70,15 @@ class MusicianProfileBase(BaseModel):
     contract_template_body: str | None = None
     contract_pdf_url: str | None = None
     signature_image_url: str | None = None
+    # Payout fields
+    payout_method: str | None = None
+    payout_bank_name: str | None = None
+    payout_account_number: str | None = None
+    payout_cci: str | None = None
+    payout_phone: str | None = None
+    payout_beneficiary_name: str | None = None
+    payout_beneficiary_document: str | None = None
+    payout_mp_email: str | None = None
 
 
 class MusicianProfileCreate(MusicianProfileBase):
@@ -105,6 +114,15 @@ class MusicianProfileUpdate(BaseModel):
     contract_template_title: str | None = None
     contract_template_body: str | None = None
     signature_image_url: str | None = None
+    payout_method: str | None = None
+    payout_bank_name: str | None = None
+    payout_account_number: str | None = None
+    payout_cci: str | None = None
+    payout_phone: str | None = None
+    payout_beneficiary_name: str | None = None
+    payout_beneficiary_document: str | None = None
+    payout_mp_email: str | None = None
+
 
 
 def _sync_songs_and_repertoire(

@@ -157,7 +157,13 @@ def settlement_state_for_booking(
     return "settled"
 
 
-def release_retained_payments(db: Session, booking_id) -> list[Payment]:
+def release_retained_payments(
+    db: Session,
+    booking_id,
+    payout_reference: str | None = None,
+    payout_evidence_url: str | None = None,
+    payout_notes: str | None = None,
+) -> list[Payment]:
     now = now_peru_naive()
     payments = (
         db.query(Payment)
@@ -170,7 +176,14 @@ def release_retained_payments(db: Session, booking_id) -> list[Payment]:
     for payment in payments:
         payment.status = PaymentStatus.released
         payment.released_at = now
+        if payout_reference:
+            payment.payout_reference = payout_reference
+        if payout_evidence_url:
+            payment.payout_evidence_url = payout_evidence_url
+        if payout_notes:
+            payment.payout_notes = payout_notes
     return payments
+
 
 
 def musician_pool_from_gross(booking: Booking, gross: float) -> float:

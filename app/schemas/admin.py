@@ -144,10 +144,19 @@ class AdminPaymentReject(BaseModel):
     reason: str = Field(min_length=3, max_length=500)
 
 
+class AdminReleaseSettlement(BaseModel):
+    payout_reference: str | None = Field(default=None, max_length=100)
+    payout_evidence_url: str | None = Field(default=None, max_length=500)
+    payout_notes: str | None = Field(default=None, max_length=2000)
+
+
 class AdminSettleBooking(BaseModel):
     musician_amount: float = Field(ge=0)
     contractor_refund: float = Field(ge=0)
     notes: str | None = Field(default=None, max_length=2000)
+    payout_reference: str | None = Field(default=None, max_length=100)
+    payout_evidence_url: str | None = Field(default=None, max_length=500)
+
 
 
 class AdminProfileStatusUpdate(BaseModel):

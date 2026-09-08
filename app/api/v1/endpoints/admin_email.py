@@ -16,6 +16,7 @@ from app.schemas.email import (
     EmailTemplateRenderRequest,
     EmailTemplateUpdate,
 )
+from app.services.email.logo import LOGO_CID, LOGO_PUBLIC_URL
 from app.services.email.preview_context import build_sample_email_context
 from app.services.email.service import get_template, render_email_template, send_templated_email
 
@@ -115,9 +116,10 @@ def render_email_template_preview(
         html_body=payload.html_body,
         text_body=payload.text_body,
     )
+    html = rendered["html"].replace(f"cid:{LOGO_CID}", LOGO_PUBLIC_URL)
     return EmailTemplateRenderOut(
         subject=rendered["subject"],
-        html=rendered["html"],
+        html=html,
         text=rendered["text"],
         context=sample_context,
     )

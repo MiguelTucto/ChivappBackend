@@ -458,7 +458,21 @@ MIGRATION_STATEMENTS = [
     "ALTER TABLE payment ADD COLUMN IF NOT EXISTS gateway_preference_id VARCHAR",
     "ALTER TABLE payment ADD COLUMN IF NOT EXISTS gateway_metadata JSONB",
     "CREATE INDEX IF NOT EXISTS ix_payment_gateway_payment_id ON payment (gateway_payment_id)",
+    # Columnas para desembolso a músicos (Opción 2: Transferencia / Yape / Mercado Pago).
+    "ALTER TABLE musician_profile ADD COLUMN IF NOT EXISTS payout_method VARCHAR",
+    "ALTER TABLE musician_profile ADD COLUMN IF NOT EXISTS payout_bank_name VARCHAR",
+    "ALTER TABLE musician_profile ADD COLUMN IF NOT EXISTS payout_account_number VARCHAR",
+    "ALTER TABLE musician_profile ADD COLUMN IF NOT EXISTS payout_cci VARCHAR",
+    "ALTER TABLE musician_profile ADD COLUMN IF NOT EXISTS payout_phone VARCHAR",
+    "ALTER TABLE musician_profile ADD COLUMN IF NOT EXISTS payout_beneficiary_name VARCHAR",
+    "ALTER TABLE musician_profile ADD COLUMN IF NOT EXISTS payout_beneficiary_document VARCHAR",
+    "ALTER TABLE musician_profile ADD COLUMN IF NOT EXISTS payout_mp_email VARCHAR",
+    # Columnas para liquidación y desembolso en pagos.
+    "ALTER TABLE payment ADD COLUMN IF NOT EXISTS payout_reference VARCHAR",
+    "ALTER TABLE payment ADD COLUMN IF NOT EXISTS payout_evidence_url VARCHAR",
+    "ALTER TABLE payment ADD COLUMN IF NOT EXISTS payout_notes VARCHAR",
 ]
+
 
 
 def run_migrations(engine: Engine) -> None:
