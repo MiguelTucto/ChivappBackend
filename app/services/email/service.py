@@ -46,7 +46,25 @@ def ensure_email_templates(db: Session, update_existing: bool = True) -> None:
 
 
 def get_template(db: Session, slug: str) -> EmailTemplate | None:
-    return db.query(EmailTemplate).filter(EmailTemplate.slug == slug).first()
+    template = db.query(EmailTemplate).filter(EmailTemplate.slug == slug).first()
+    if not template:
+        for item in EMAIL_TEMPLATE_DEFAULTS:
+            if item["slug"] == slug:
+                template = EmailTemplate(
+                    slug=item["slug"],
+                    name=item["name"],
+                    description=item["description"],
+                    subject=item["subject"],
+                    html_body=item["html_body"],
+                    text_body=item["text_body"],
+                    available_variables=item["available_variables"],
+                    enabled=True,
+                )
+                db.add(template)
+                db.commit()
+                db.refresh(template)
+                break
+    return template
 
 
 def render_email_template(

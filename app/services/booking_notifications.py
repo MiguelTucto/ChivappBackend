@@ -144,6 +144,48 @@ def notify_booking_quoted(db: Session, contractor_user: User, booking_id: str) -
         booking_id=booking_id,
     )
 
+    try:
+        from app.core.config import settings
+        from app.models.booking import Booking
+        from app.models.musician_profile import MusicianProfile
+        from app.services.email.defaults import APP_NAME
+        from app.services.email.service import send_templated_email
+
+        booking = db.query(Booking).filter(Booking.id == booking_id).first()
+        if booking and contractor_user.email and not contractor_user.email.endswith("@guest.local"):
+            musician_name = "El músico"
+            if booking.musician_id:
+                musician = (
+                    db.query(MusicianProfile)
+                    .filter(MusicianProfile.id == booking.musician_id)
+                    .first()
+                )
+                if musician and (musician.stage_name or (musician.user and musician.user.fullname)):
+                    musician_name = musician.stage_name or musician.user.fullname
+
+            price_str = f"{booking.price:.2f}" if booking.price else "0.00"
+            action_url = f"{settings.FRONTEND_URL.rstrip('/')}/contractor/bookings/{booking_id}"
+            send_templated_email(
+                db,
+                slug="booking_quoted",
+                to=contractor_user.email,
+                context={
+                    "contractor_name": contractor_user.fullname or "Cliente",
+                    "musician_name": musician_name,
+                    "event_type": booking.event_type or "Presentación musical",
+                    "price": price_str,
+                    "app_name": APP_NAME,
+                    "action_url": action_url,
+                },
+                user_id=contractor_user.id,
+                meta={"booking_id": booking_id},
+            )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Error enviando correo de cotización recibida: %s", exc
+        )
+
 
 def notify_booking_quote_updated(db: Session, contractor_user: User, booking_id: str) -> None:
     notify_user(
@@ -560,6 +602,35 @@ def notify_profile_approved(
         meta={"profile_id": profile_id, "profile_role": profile_role},
     )
 
+    try:
+        from app.core.config import settings
+        from app.services.email.defaults import APP_NAME
+        from app.services.email.service import send_templated_email
+
+        if user.email and not user.email.endswith("@guest.local"):
+            dashboard_path = (
+                "/musician/profile" if profile_role == "musician" else "/contractor/profile"
+            )
+            action_url = f"{settings.FRONTEND_URL.rstrip('/')}{dashboard_path}"
+            send_templated_email(
+                db,
+                slug="profile_approved",
+                to=user.email,
+                context={
+                    "user_name": user.fullname or "Usuario",
+                    "role_label": role_label.capitalize(),
+                    "app_name": APP_NAME,
+                    "action_url": action_url,
+                },
+                user_id=user.id,
+                meta={"profile_id": profile_id, "profile_role": profile_role},
+            )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Error enviando correo de perfil aprobado: %s", exc
+        )
+
 
 def notify_profile_rejected(
     db: Session,
@@ -569,6 +640,7 @@ def notify_profile_rejected(
     profile_id: str,
     reason: str,
 ) -> None:
+    role_label = "músico" if profile_role == "musician" else "contratista"
     notify_user(
         db,
         user=user,
@@ -581,6 +653,40 @@ def notify_profile_rejected(
             "rejection_reason": reason,
         },
     )
+
+    try:
+        from app.core.config import settings
+        from app.services.email.defaults import APP_NAME
+        from app.services.email.service import send_templated_email
+
+        if user.email and not user.email.endswith("@guest.local"):
+            dashboard_path = (
+                "/musician/profile" if profile_role == "musician" else "/contractor/profile"
+            )
+            action_url = f"{settings.FRONTEND_URL.rstrip('/')}{dashboard_path}"
+            send_templated_email(
+                db,
+                slug="profile_rejected",
+                to=user.email,
+                context={
+                    "user_name": user.fullname or "Usuario",
+                    "role_label": role_label.capitalize(),
+                    "reason": reason,
+                    "app_name": APP_NAME,
+                    "action_url": action_url,
+                },
+                user_id=user.id,
+                meta={
+                    "profile_id": profile_id,
+                    "profile_role": profile_role,
+                    "rejection_reason": reason,
+                },
+            )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Error enviando correo de perfil rechazado: %s", exc
+        )
 
 
 def notify_profile_needs_resubmit(

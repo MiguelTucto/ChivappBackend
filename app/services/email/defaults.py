@@ -245,4 +245,119 @@ Revisa la solicitud y envía tu cotización aquí:
 {{action_url}}
 """.strip(),
     },
+    {
+        "slug": "profile_approved",
+        "name": "Perfil verificado y aprobado",
+        "description": "Se envía al usuario cuando su perfil de músico o contratista es aprobado por el administrador.",
+        "subject": "¡Felicidades {{user_name}}! Tu perfil ha sido verificado en {{app_name}}",
+        "available_variables": [
+            "user_name",
+            "role_label",
+            "app_name",
+            "action_url",
+        ],
+        "html_body": build_email_layout(
+            category_badge="Verificación",
+            badge_bg="#DCFCE7",
+            badge_color="#15803D",
+            title="¡Tu perfil ha sido verificado!",
+            greeting="Hola {{user_name}},",
+            lead_text="Nos alegra informarte que tu perfil de <strong>{{role_label}}</strong> ha sido revisado y verificado exitosamente por el equipo de {{app_name}}. Ya tienes acceso completo a todas las funciones de la plataforma.",
+            info_items=[
+                ("Estado", "Verificado y Aprobado"),
+                ("Tipo de perfil", "{{role_label}}"),
+                ("Plataforma", "{{app_name}}"),
+            ],
+            cta_label="Ir a mi panel",
+            cta_url="{{action_url}}",
+            secondary_note="Tu perfil ya es visible y está habilitado para gestionar reservas.",
+        ),
+        "text_body": """
+Hola {{user_name}},
+
+Nos alegra informarte que tu perfil de {{role_label}} ha sido revisado y verificado exitosamente por el equipo de {{app_name}}.
+
+Ya tienes acceso completo a todas las funciones de la plataforma.
+
+Puedes acceder a tu panel aquí:
+{{action_url}}
+""".strip(),
+    },
+    {
+        "slug": "profile_rejected",
+        "name": "Perfil requiere correcciones",
+        "description": "Se envía al usuario cuando su perfil requiere correcciones tras la revisión del administrador.",
+        "subject": "Tu perfil de {{role_label}} requiere correcciones en {{app_name}}",
+        "available_variables": [
+            "user_name",
+            "role_label",
+            "reason",
+            "app_name",
+            "action_url",
+        ],
+        "html_body": build_email_layout(
+            category_badge="Revisión de Perfil",
+            badge_bg="#FEF3C7",
+            badge_color="#92400E",
+            title="Tu perfil requiere algunos ajustes",
+            greeting="Hola {{user_name}},",
+            lead_text="El equipo de {{app_name}} revisó tu perfil de <strong>{{role_label}}</strong> y solicita que realices las siguientes correcciones antes de poder verificarlo:",
+            info_items=[
+                ("Tipo de perfil", "{{role_label}}"),
+                ("Motivo / Ajuste requerido", "{{reason}}"),
+            ],
+            cta_label="Editar y corregir mi perfil",
+            cta_url="{{action_url}}",
+            secondary_note="Una vez que apliques los cambios, vuelve a enviar tu perfil para completar la verificación.",
+        ),
+        "text_body": """
+Hola {{user_name}},
+
+El equipo de {{app_name}} revisó tu perfil de {{role_label}} y solicita que realices unas correcciones antes de poder verificarlo:
+
+Motivo / Ajuste:
+{{reason}}
+
+Edita y corrige tu perfil aquí:
+{{action_url}}
+""".strip(),
+    },
+    {
+        "slug": "booking_quoted",
+        "name": "Cotización recibida",
+        "description": "Se envía al contratista cuando el músico responde su solicitud con una cotización.",
+        "subject": "¡{{musician_name}} te ha enviado una cotización en {{app_name}}!",
+        "available_variables": [
+            "contractor_name",
+            "musician_name",
+            "app_name",
+            "event_type",
+            "price",
+            "action_url",
+        ],
+        "html_body": build_email_layout(
+            category_badge="Cotización Recibida",
+            badge_bg="#E0F2FE",
+            badge_color="#0369A1",
+            title="¡Tienes una cotización para tu evento!",
+            greeting="Hola {{contractor_name}},",
+            lead_text="<strong>{{musician_name}}</strong> ha respondido a tu solicitud para el evento <strong>{{event_type}}</strong> con una cotización:",
+            info_items=[
+                ("Músico / Agrupación", "{{musician_name}}"),
+                ("Tipo de evento", "{{event_type}}"),
+                ("Monto cotizado", "S/ {{price}}"),
+            ],
+            cta_label="Ver cotización y confirmar",
+            cta_url="{{action_url}}",
+            secondary_note="Revisa la cotización en ChivApp para aceptar el contrato y asegurar la fecha de tu evento.",
+        ),
+        "text_body": """
+Hola {{contractor_name}},
+
+{{musician_name}} ha respondido a tu solicitud para el evento {{event_type}} con una cotización de S/ {{price}}.
+
+Revisa la cotización y confirma tu reserva aquí:
+{{action_url}}
+""".strip(),
+    },
 ]

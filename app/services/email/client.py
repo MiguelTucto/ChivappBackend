@@ -77,4 +77,6 @@ def send_via_brevo(
         raise EmailDeliveryError(f"Brevo respondió con error {response.status_code}: {detail}")
 
     data = response.json()
-    return data.get("messageId")
+    message_id = data.get("messageId")
+    logger.info("Correo enviado exitosamente vía Brevo a %s — messageId: %s", to, message_id)
+    return message_id

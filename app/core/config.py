@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
 
     BREVO_API_KEY: str = ""
-    EMAIL_FROM: str = "ChivApp <miguel2cto@gmail.com>"
+    EMAIL_FROM: str = "ChivApp <soporte@chiv.app>"
     EMAIL_ENABLED: bool = True
 
     # Rate Limiting
