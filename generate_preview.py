@@ -12,7 +12,7 @@ sample_context = {
     "member_name": "María Integrante",
     "member_email": "maria.integrante@email.com",
     "leader_name": "Miguel Tucto",
-    "app_name": "ChivApp",
+    "app_name": "Chivapp",
     "login_url": "https://chiv.app/login",
     "action_url": "https://chiv.app/musician/bookings/demo-reserva",
     "expires_hours": "48",
@@ -41,7 +41,7 @@ html_content = f"""<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visor de Correos ChivApp - Brevo</title>
+  <title>Visor de Correos Chivapp - Brevo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -220,7 +220,7 @@ html_content = f"""<!DOCTYPE html>
 <body>
   <header>
     <div class="logo">
-      <span>🎵 ChivApp</span>
+      <span>Chivapp</span>
       <span style="color:#64748B;">/</span>
       <span style="font-size: 14px; font-weight: 600; color: #94A3B8;">Visor de Plantillas UI/UX</span>
     </div>

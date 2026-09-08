@@ -66,7 +66,7 @@ def create_preference(
     }
     type_label = type_labels.get(payment_type, "Pago")
 
-    item_title = f"ChivApp: {booking.event_type} - {musician_name}"
+    item_title = f"Chivapp: {booking.event_type} - {musician_name}"
     item_description = f"Reserva #{str(booking.id)[:8]} ({type_label})"
 
     frontend_base = settings.FRONTEND_URL.rstrip("/")
@@ -95,7 +95,7 @@ def create_preference(
         ],
         "payer": {
             "email": effective_email,
-            "name": contractor_user.fullname or "Cliente ChivApp",
+            "name": contractor_user.fullname or "Cliente Chivapp",
         },
         "external_reference": str(booking.id),
         "metadata": {
@@ -317,7 +317,7 @@ def process_direct_payment(
 
     musician = db.query(MusicianProfile).filter(MusicianProfile.id == booking.musician_id).first()
     musician_name = musician.stage_name if musician and musician.stage_name else "Músico"
-    description = f"ChivApp: {booking.event_type} - {musician_name} (Reserva #{str(booking.id)[:8]})"
+    description = f"Chivapp: {booking.event_type} - {musician_name} (Reserva #{str(booking.id)[:8]})"
 
     payer_email = payment_payload.get("payer_email") or contractor_user.email
     if settings.MERCADO_PAGO_SANDBOX:

@@ -1,4 +1,4 @@
-"""Create an admin user for the ChivApp platform."""
+"""Create an admin user for the Chivapp platform."""
 
 import sys
 from datetime import datetime

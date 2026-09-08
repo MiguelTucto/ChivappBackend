@@ -21,7 +21,7 @@ def get_or_create_platform_payment_settings(db: Session) -> PlatformPaymentSetti
     row = PlatformPaymentSettings(
         phone_number="",
         phone_label="Yape / Plin",
-        account_name="ChivApp",
+        account_name="Chivapp",
         instructions="Realiza el pago a la cuenta de la plataforma y sube el comprobante.",
         platform_fee_percent=Decimal("2"),
     )

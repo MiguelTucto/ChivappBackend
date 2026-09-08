@@ -1,7 +1,7 @@
 # Guía Maestra de Despliegue a Producción en Google Cloud Platform (GCP)
-## Proyecto: ChivApp (chiv.app)
+## Proyecto: Chivapp (chiv.app)
 
-Esta guía documenta paso a paso cómo desplegar la plataforma **ChivApp** (Frontend Next.js 16 + Backend FastAPI + Base de datos PostgreSQL) en **Google Cloud Platform (GCP)** con el dominio oficial **`chiv.app`** y la pasarela de pagos **Mercado Pago** en modo Producción.
+Esta guía documenta paso a paso cómo desplegar la plataforma **Chivapp** (Frontend Next.js 16 + Backend FastAPI + Base de datos PostgreSQL) en **Google Cloud Platform (GCP)** con el dominio oficial **`chiv.app`** y la pasarela de pagos **Mercado Pago** en modo Producción.
 
 ---
 
@@ -109,7 +109,7 @@ gcloud storage buckets create gs://chivapp-uploads-prod --location=$REGION
    gcloud artifacts repositories create chivapp-repo \
        --repository-format=docker \
        --location=$REGION \
-       --description="Repositorio ChivApp"
+       --description="Repositorio Chivapp"
    ```
 
 2. **Compilar la imagen del Backend:**
@@ -137,7 +137,7 @@ BACKEND_CORS_ORIGINS=['https://chiv.app','https://www.chiv.app','https://api.chi
 FRONTEND_URL=https://chiv.app,\
 OAUTH_REDIRECT_BASE_URL=https://chiv.app/api/v1,\
 BREVO_API_KEY=TU_API_KEY_DE_BREVO,\
-EMAIL_FROM=ChivApp <soporte@chiv.app>,\
+EMAIL_FROM=Chivapp <soporte@chiv.app>,\
 EMAIL_ENABLED=True,\
 RATE_LIMITING_ENABLED=True,\
 ENABLE_HSTS=True,\

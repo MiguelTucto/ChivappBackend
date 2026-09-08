@@ -1,6 +1,6 @@
-# Backend — MusicLink API (ChivApp)
+# Backend — MusicLink API (Chivapp)
 
-API REST construida con **FastAPI** para la plataforma ChivApp. Expone recursos de usuarios, perfiles, reservas, contratos, pagos y notificaciones.
+API REST construida con **FastAPI** para la plataforma Chivapp. Expone recursos de usuarios, perfiles, reservas, contratos, pagos y notificaciones.
 
 ## Stack
 

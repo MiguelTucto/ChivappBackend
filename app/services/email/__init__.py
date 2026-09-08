@@ -1,1 +1,1 @@
-"""Email services for ChivApp."""
+"""Email services for Chivapp."""

@@ -1,5 +1,5 @@
 # ==========================================
-# Dockerfile - ChivApp Backend
+# Dockerfile - Chivapp Backend
 # ==========================================
 FROM python:3.12-slim
 

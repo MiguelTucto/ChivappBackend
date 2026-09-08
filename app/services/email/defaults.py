@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from app.services.email.email_builder import build_email_layout
 
-APP_NAME = "ChivApp"
+APP_NAME = "Chivapp"
 
 EMAIL_TEMPLATE_DEFAULTS: list[dict] = [
     {
         "slug": "welcome",
         "name": "Bienvenida",
         "description": "Se envía al crear una cuenta con correo y contraseña.",
-        "subject": "¡Bienvenido a ChivApp, {{user_name}}!",
+        "subject": "¡Bienvenido a Chivapp, {{user_name}}!",
         "available_variables": [
             "user_name",
             "user_email",
@@ -24,12 +24,12 @@ EMAIL_TEMPLATE_DEFAULTS: list[dict] = [
             badge_color="#15803D",
             title="¡Bienvenido a {{app_name}}!",
             greeting="Hola {{user_name}},",
-            lead_text="Tu cuenta ha sido creada exitosamente con el correo <strong>{{user_email}}</strong>. Desde ChivApp puedes descubrir músicos, gestionar reservas y coordinar tus presentaciones.",
+            lead_text="Tu cuenta ha sido creada exitosamente con el correo <strong>{{user_email}}</strong>. Desde Chivapp puedes descubrir músicos, gestionar reservas y coordinar tus presentaciones.",
             info_items=[
                 ("Correo registrado", "{{user_email}}"),
                 ("Plataforma", "{{app_name}}"),
             ],
-            cta_label="Ir a ChivApp",
+            cta_label="Ir a Chivapp",
             cta_url="{{login_url}}",
             secondary_note="Si no creaste esta cuenta, puedes ignorar este mensaje.",
         ),
@@ -349,7 +349,7 @@ Edita y corrige tu perfil aquí:
             ],
             cta_label="Ver cotización y confirmar",
             cta_url="{{action_url}}",
-            secondary_note="Revisa la cotización en ChivApp para aceptar el contrato y asegurar la fecha de tu evento.",
+            secondary_note="Revisa la cotización en Chivapp para aceptar el contrato y asegurar la fecha de tu evento.",
         ),
         "text_body": """
 Hola {{contractor_name}},

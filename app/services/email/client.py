@@ -17,7 +17,7 @@ class EmailDeliveryError(Exception):
 def parse_sender_info(raw_sender: str) -> tuple[str, str]:
     """Extrae el nombre y correo del remitente configurado."""
     name, addr = email.utils.parseaddr(raw_sender)
-    clean_name = name.strip() or "ChivApp"
+    clean_name = name.strip() or "Chivapp"
     clean_addr = addr.strip() or "notificaciones@chiv.app"
     return clean_name, clean_addr
 

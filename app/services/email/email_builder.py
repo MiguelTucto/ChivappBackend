@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-APP_NAME = "ChivApp"
-APP_TAGLINE = "Plataforma de contratación musical en vivo"
+APP_NAME = "Chivapp"
 APP_URL = "https://chiv.app"
+APP_LOGO_URL = "https://chiv.app/logo-chivapp.png"
 
 
 def build_email_layout(
@@ -86,8 +86,8 @@ def build_email_layout(
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="left" valign="middle">
-                    <a href="{APP_URL}" target="_blank" style="text-decoration: none; display: inline-flex; align-items: center;">
-                      <span style="font-size: 22px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px;">🎵 {APP_NAME}</span>
+                    <a href="{APP_URL}" target="_blank" style="text-decoration: none; display: inline-block;">
+                      <img src="{APP_LOGO_URL}" alt="{APP_NAME}" height="32" style="display: block; height: 32px; width: auto; max-height: 32px; border: 0; outline: none; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 800; color: #0F172A;" />
                     </a>
                   </td>
                   <td align="right" valign="middle">
@@ -126,14 +126,14 @@ def build_email_layout(
           <!-- Professional Footer -->
           <tr>
             <td style="padding: 24px 32px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; text-align: center;">
-              <p style="font-size: 13px; font-weight: 600; color: #475569; margin: 0 0 6px 0;">
-                {APP_NAME} · {APP_TAGLINE}
+              <p style="font-size: 14px; font-weight: 700; color: #334155; margin: 0 0 6px 0; letter-spacing: -0.2px;">
+                {APP_NAME}
               </p>
               <p style="font-size: 12px; color: #94A3B8; margin: 0 0 12px 0; line-height: 1.5;">
                 Este es un correo transaccional generado automáticamente. Si no realizaste esta acción o no reconoces esta cuenta, puedes ignorar este mensaje con seguridad.
               </p>
               <p style="font-size: 11px; color: #94A3B8; margin: 0;">
-                Horario de referencia: Lima, Perú (GMT-5) · © 2026 ChivApp
+                Horario de referencia: Lima, Perú (GMT-5) · © 2026 {APP_NAME}
               </p>
             </td>
           </tr>
