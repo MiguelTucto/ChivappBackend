@@ -48,3 +48,24 @@ def test_matching_slots_filters_by_day_and_time():
     late = _slot(0, time(18, 0), time(23, 0))
     result = matching_slots([early, late], date(2026, 8, 23), start_time=time(19, 0))
     assert result == [late]
+
+
+def test_assert_musician_available_allows_booking_when_no_slots_published(monkeypatch):
+    from unittest.mock import MagicMock
+    from uuid import uuid4
+    from app.services.availability_match import assert_musician_available
+
+    mock_db = MagicMock()
+    # When list_musician_slots returns empty, availability is open
+    monkeypatch.setattr(
+        "app.services.availability_match.list_musician_slots",
+        lambda db, m_id: [],
+    )
+    # Should not raise any HTTPException
+    assert_musician_available(
+        db=mock_db,
+        musician_id=uuid4(),
+        event_date=date(2026, 8, 25),
+        start_time=time(20, 0),
+    )
+

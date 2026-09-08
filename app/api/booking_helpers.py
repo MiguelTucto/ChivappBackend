@@ -104,17 +104,30 @@ def get_musician_profile(
     )
 
 
-def get_contractor_profile_or_400(db: Session, user: User) -> ContractorProfile:
-    contractor = get_contractor_profile(db, user)
-    if not contractor:
-        raise HTTPException(
-            status_code=400,
-            detail="Debes tener un perfil de contratista creado",
-        )
-    if contractor.status != ProfileStatus.published or not user.is_verified:
+def get_contractor_profile_or_400(
+    db: Session,
+    user: User,
+    *,
+    require_verified: bool = False,
+) -> ContractorProfile:
+    if user.role != UserRole.contractor:
         raise HTTPException(
             status_code=403,
-            detail="Tu perfil de contratista debe estar verificado para crear reservas",
+            detail="Solo los contratistas pueden realizar esta acción",
+        )
+    contractor = get_contractor_profile(db, user)
+    if not contractor:
+        contractor = ContractorProfile(
+            user_id=user.id,
+            status=ProfileStatus.draft,
+        )
+        db.add(contractor)
+        db.commit()
+        db.refresh(contractor)
+    if require_verified and (contractor.status != ProfileStatus.published or not user.is_verified):
+        raise HTTPException(
+            status_code=403,
+            detail="Tu perfil de contratista debe estar verificado para esta acción",
         )
     return contractor
 

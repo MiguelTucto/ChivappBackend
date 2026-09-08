@@ -105,10 +105,10 @@ def create_booking(
         raise HTTPException(403, "Solo los contratistas pueden crear reservas")
 
     contractor = get_or_create_contractor_profile(db, current_user)
-    if contractor.status != ProfileStatus.published or not current_user.is_verified:
+    if not current_user.is_active:
         raise HTTPException(
             status_code=403,
-            detail="Tu perfil de contratista debe estar verificado para crear reservas",
+            detail="Tu cuenta de contratista está desactivada",
         )
 
     if not current_user.email_verified_at:

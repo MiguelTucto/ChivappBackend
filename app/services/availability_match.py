@@ -69,10 +69,8 @@ def assert_musician_available(
 ) -> None:
     slots = list_musician_slots(db, musician_id)
     if not slots:
-        raise HTTPException(
-            400,
-            "Este músico aún no tiene horarios de disponibilidad publicados.",
-        )
+        # El músico no tiene franjas restringidas publicadas; disponibilidad abierta sujeta a confirmación en cotización.
+        return
 
     day_slots = matching_slots(slots, event_date)
     if not day_slots:

@@ -178,3 +178,14 @@ def test_admin_booking_detail_composes_full_view(client, db_session):
 
     pdf_response = client.get(f"/api/v1/admin/bookings/{booking.id}/contract-pdf")
     assert pdf_response.status_code == 404  # sin contrato asociado todavía
+
+
+def test_get_contractor_profile_or_400_allows_unverified_contractor(db_session):
+    from app.api.booking_helpers import get_contractor_profile_or_400
+    contractor_user = _user(db_session, role=UserRole.contractor, email="unverified_c@test.com")
+    contractor_user.is_verified = False
+
+    profile = get_contractor_profile_or_400(db_session, contractor_user)
+    assert profile is not None
+    assert profile.user_id == contractor_user.id
+
