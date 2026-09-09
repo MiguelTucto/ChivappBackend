@@ -65,7 +65,7 @@ def test_send_via_brevo_attaches_inline_logo():
         assert len(payload["attachment"]) == 1
         att = payload["attachment"][0]
         assert att["name"] == LOGO_FILENAME
-        assert att["cid"] == LOGO_CID
+        assert att["contentId"] == LOGO_CID
         assert len(att["content"]) > 1000
 
 

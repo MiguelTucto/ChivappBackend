@@ -72,52 +72,36 @@ def sync_booking_platform_fee(
 def contractor_payable_total(booking: Booking) -> Decimal | None:
     if booking.price_agreed is None:
         return None
-    price = Decimal(str(booking.price_agreed))
-    fee = Decimal(str(booking.platform_fee_amount or 0))
-    return price + fee
+    M = Decimal(str(booking.price_agreed))
+    g_percent = Decimal(str(booking.platform_fee_percent or 0))
+    g = g_percent / Decimal("100")
+    
+    # Mercado Pago variables (Peru)
+    F = Decimal("1.18")
+    p = Decimal("0.0412")
+    
+    c_unico = (M * (Decimal("1") + g) + F) / (Decimal("1") - p)
+    return c_unico.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def contractor_advance_due(booking: Booking) -> Decimal | None:
-    """First transfer suggested: service advance (platform fee settles in remaining balance).
-
-    Example: price 500, fee 2% = 10, advance 200 → advance due = 200;
-    remaining = (500 + 10) - 200 = 310.
-    """
-    total = contractor_payable_total(booking)
-    if total is None:
-        return None
-    if booking.advance_amount is None:
-        return total
-    return Decimal(str(booking.advance_amount)).quantize(
-        Decimal("0.01"), rounding=ROUND_HALF_UP
-    )
+    """It's now a single 100% payment (cobro único)."""
+    return contractor_payable_total(booking)
 
 
 def contractor_remaining_after_advance(booking: Booking) -> Decimal | None:
-    """Estimated balance after the service advance: (price + fee) - advance."""
-    total = contractor_payable_total(booking)
-    if total is None:
-        return None
-    advance = (
-        Decimal(str(booking.advance_amount))
-        if booking.advance_amount is not None
-        else Decimal("0")
-    )
-    remaining = total - advance
-    if remaining <= 0:
-        return Decimal("0.00")
-    return remaining.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    """Since it is a single payment, there is no remaining balance."""
+    return Decimal("0.00")
 
 
 def musician_portion_of_paid(booking: Booking, paid_total: Decimal) -> Decimal:
-    """Share of contractor payments that belongs to the musician (excludes platform fee)."""
+    """Share of contractor payments that belongs to the musician."""
     price = Decimal(str(booking.price_agreed or 0))
-    fee = Decimal(str(booking.platform_fee_amount or 0))
-    payable = price + fee
-    if paid_total <= 0:
-        return Decimal("0.00")
-    if fee <= 0 or payable <= 0:
+    total_payable = contractor_payable_total(booking)
+    
+    if not total_payable or total_payable <= 0:
         return paid_total
-    return (paid_total * price / payable).quantize(
+        
+    return (paid_total * price / total_payable).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )

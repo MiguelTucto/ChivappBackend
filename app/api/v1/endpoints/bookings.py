@@ -118,6 +118,12 @@ def create_booking(
             detail="Confirma tu correo electrónico antes de crear reservas",
         )
 
+    if not current_user.is_verified:
+        raise HTTPException(
+            status_code=403,
+            detail="Tu cuenta de contratista no ha sido verificada. Completa el paso de Datos en tu perfil.",
+        )
+
     musician = (
         db.query(MusicianProfile)
         .join(User)

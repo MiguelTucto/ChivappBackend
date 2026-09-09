@@ -10,25 +10,26 @@ from app.services.settlement import (
 )
 
 
-def _booking(price_agreed, platform_fee_amount) -> Booking:
+def _booking(price_agreed, platform_fee_amount, platform_fee_percent=None) -> Booking:
     booking = Booking()
     booking.price_agreed = price_agreed
     booking.platform_fee_amount = platform_fee_amount
+    booking.platform_fee_percent = platform_fee_percent
     return booking
 
 
 def test_musician_pool_from_gross_excludes_platform_fee():
-    booking = _booking(Decimal("500"), Decimal("10"))
-    assert musician_pool_from_gross(booking, 510.0) == 500.0
+    booking = _booking(Decimal("500"), Decimal("10"), Decimal("2"))
+    assert musician_pool_from_gross(booking, 533.15) == 500.0
 
 
 def test_fee_portion_from_gross_is_the_remainder():
-    booking = _booking(Decimal("500"), Decimal("10"))
-    assert fee_portion_from_gross(booking, 510.0) == 10.0
+    booking = _booking(Decimal("500"), Decimal("10"), Decimal("2"))
+    assert fee_portion_from_gross(booking, 533.15) == 33.15
 
 
 def test_fee_portion_from_gross_never_negative():
-    booking = _booking(Decimal("500"), Decimal("10"))
+    booking = _booking(Decimal("500"), Decimal("10"), Decimal("2"))
     # gross menor al pool esperado no debe producir una comisión negativa
     assert fee_portion_from_gross(booking, 100.0) >= 0.0
 

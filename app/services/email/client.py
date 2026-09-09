@@ -55,7 +55,7 @@ def send_via_brevo(
             {
                 "name": LOGO_FILENAME,
                 "content": logo_b64,
-                "cid": LOGO_CID,
+                "contentId": LOGO_CID,
             }
         )
 
