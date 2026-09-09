@@ -382,6 +382,9 @@ def process_direct_payment(
 
     headers = _mp_headers()
     headers["X-Idempotency-Key"] = str(uuid.uuid4())
+    device_id = payment_payload.get("device_id")
+    if device_id:
+        headers["X-meli-session-id"] = device_id
 
     try:
         with httpx.Client(timeout=30.0) as client:

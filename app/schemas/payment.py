@@ -121,6 +121,7 @@ class MercadoPagoProcessPaymentRequest(BaseModel):
     installments: int = 1
     issuer_id: str | None = None
     payer_email: str | None = None
+    device_id: str | None = None
     identification_type: str | None = None
     identification_number: str | None = None
     signature_image_url: str | None = None
